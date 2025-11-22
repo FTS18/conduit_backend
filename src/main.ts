@@ -74,9 +74,9 @@ app.listen(PORT, async () => {
       const userCount = await prisma.user.count();
       console.info('Database tables verified');
       
-      // Always seed if no users exist
-      if (userCount === 0) {
-        console.info('No users found, seeding dummy data...');
+      // Always seed if fewer than 4 users exist
+      if (userCount < 4) {
+        console.info(`Only ${userCount} users found, seeding dummy data...`);
         try {
           const { execSync } = require('child_process');
           execSync('npx prisma db seed', { stdio: 'inherit' });
