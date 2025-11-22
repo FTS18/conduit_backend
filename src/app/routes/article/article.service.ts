@@ -87,9 +87,6 @@ export const getArticles = async (query: any, id?: number) => {
 
   const articles = await prisma.article.findMany({
     where: { AND: andQueries },
-    orderBy: {
-      createdAt: 'desc',
-    },
     skip: Number(query.offset) || 0,
     take: Number(query.limit) || 10,
     include: {
@@ -108,16 +105,32 @@ export const getArticles = async (query: any, id?: number) => {
       },
       favoritedBy: true,
       bookmarks: true,
+      comments: true,
       _count: {
         select: {
           favoritedBy: true,
+          bookmarks: true,
+          comments: true,
         },
       },
     },
   });
 
+  // Sort by engagement algorithm: favorites + bookmarks + comments
+  const sortedArticles = articles.sort((a, b) => {
+    const aEngagement = a._count.favoritedBy + a._count.bookmarks + a._count.comments;
+    const bEngagement = b._count.favoritedBy + b._count.bookmarks + b._count.comments;
+    
+    // If engagement is equal, sort by creation date (newer first)
+    if (aEngagement === bEngagement) {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    
+    return bEngagement - aEngagement;
+  });
+
   return {
-    articles: articles.map((article: any) => articleMapper(article, id)),
+    articles: sortedArticles.map((article: any) => articleMapper(article, id)),
     articlesCount,
   };
 };

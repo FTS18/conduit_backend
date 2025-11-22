@@ -92,6 +92,45 @@ const main = async () => {
     
     console.log('Added 2 comments per article');
     
+    // Add random favorites and bookmarks for engagement algorithm
+    for (const article of articles) {
+      // Random number of favorites (0-3)
+      const favoriteCount = Math.floor(Math.random() * 4);
+      for (let i = 0; i < favoriteCount; i++) {
+        const randomUser = users[Math.floor(Math.random() * users.length)];
+        try {
+          await prisma.article.update({
+            where: { slug: article.slug },
+            data: {
+              favoritedBy: {
+                connect: { id: randomUser.id }
+              }
+            }
+          });
+        } catch (e) {
+          // Ignore duplicate favorites
+        }
+      }
+      
+      // Random number of bookmarks (0-2)
+      const bookmarkCount = Math.floor(Math.random() * 3);
+      for (let i = 0; i < bookmarkCount; i++) {
+        const randomUser = users[Math.floor(Math.random() * users.length)];
+        try {
+          await prisma.bookmark.create({
+            data: {
+              userId: randomUser.id,
+              articleId: article.id
+            }
+          });
+        } catch (e) {
+          // Ignore duplicate bookmarks
+        }
+      }
+    }
+    
+    console.log('Added random favorites and bookmarks for engagement');
+    
     console.log('✅ Seeding completed successfully!');
     console.log(`📊 Summary: ${users.length} users, ${articles.length} articles, ${articles.length * 2} comments`);
   } catch (e) {
