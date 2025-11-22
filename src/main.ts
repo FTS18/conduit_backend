@@ -68,6 +68,14 @@ app.listen(PORT, async () => {
     await prisma.$connect();
     console.info(`server up on port ${PORT}`);
     console.info('Database connected successfully');
+    
+    // Check if tables exist by trying to count users
+    try {
+      await prisma.user.count();
+      console.info('Database tables verified');
+    } catch (error) {
+      console.error('Database tables missing - please run migrations:', error.message);
+    }
   } catch (error) {
     console.error('Database connection failed:', error);
   }
