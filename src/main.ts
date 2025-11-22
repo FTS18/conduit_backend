@@ -11,7 +11,11 @@ const app = express();
  */
 
 app.use(cors({
-  origin: ['http://localhost:4100', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:4100', 
+    'http://localhost:3000',
+    'https://pecathon.vercel.app'
+  ],
   credentials: true
 }));
 app.use(bodyParser.json());
