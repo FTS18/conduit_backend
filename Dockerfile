@@ -26,5 +26,5 @@ RUN npx prisma generate --schema=./src/prisma/schema.prisma
 # Expose port
 EXPOSE 3000
 
-# Start the application with migrations
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./src/prisma/schema.prisma && node dist/api/main.js"]
+# Start the application
+CMD ["node", "dist/api/main.js"]

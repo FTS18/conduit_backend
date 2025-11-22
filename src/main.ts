@@ -3,6 +3,10 @@ import cors from 'cors';
 import * as bodyParser from 'body-parser';
 import routes from './app/routes/routes';
 import HttpException from './app/models/http-exception.model';
+import { PrismaClient } from '@prisma/client';
+
+// Initialize Prisma
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -59,6 +63,12 @@ app.use(
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.info(`server up on port ${PORT}`);
+app.listen(PORT, async () => {
+  try {
+    await prisma.$connect();
+    console.info(`server up on port ${PORT}`);
+    console.info('Database connected successfully');
+  } catch (error) {
+    console.error('Database connection failed:', error);
+  }
 });
