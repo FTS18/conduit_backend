@@ -74,13 +74,13 @@ app.listen(PORT, async () => {
       await prisma.user.count();
       console.info('Database tables verified');
     } catch (error) {
-      console.info('Database tables missing, running migrations...');
+      console.info('Database tables missing, creating schema...');
       try {
         const { execSync } = require('child_process');
-        execSync('npx prisma migrate deploy --schema=./src/prisma/schema.prisma', { stdio: 'inherit' });
-        console.info('Migrations completed successfully');
-      } catch (migrationError) {
-        console.error('Migration failed:', migrationError.message);
+        execSync('npx prisma db push --schema=./src/prisma/schema.prisma --accept-data-loss', { stdio: 'inherit' });
+        console.info('Database schema created successfully');
+      } catch (pushError) {
+        console.error('Schema creation failed:', pushError.message);
       }
     }
   } catch (error) {
