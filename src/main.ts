@@ -79,6 +79,11 @@ app.listen(PORT, async () => {
         const { execSync } = require('child_process');
         execSync('npx prisma db push --schema=./src/prisma/schema.prisma --accept-data-loss', { stdio: 'inherit' });
         console.info('Database schema created successfully');
+        
+        // Seed dummy data
+        console.info('Seeding dummy data...');
+        execSync('npx prisma db seed', { stdio: 'inherit' });
+        console.info('Dummy data seeded successfully');
       } catch (pushError) {
         console.error('Schema creation failed:', pushError.message);
       }
