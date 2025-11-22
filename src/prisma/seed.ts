@@ -80,12 +80,20 @@ const main = async () => {
     const articles = await Promise.all(articlePromises);
     console.log(`Created ${articles.length} articles`);
 
-    // Add comments to articles
+    // Add exactly 2 comments per article
     for (const article of articles) {
-      await Promise.all(users.map(user => generateComment(user.id, article.slug)));
+      // Add 2 comments per article from random users
+      const commenter1 = users[Math.floor(Math.random() * users.length)];
+      const commenter2 = users[Math.floor(Math.random() * users.length)];
+      
+      await generateComment(commenter1.id, article.slug);
+      await generateComment(commenter2.id, article.slug);
     }
     
-    console.log('Seeding completed successfully!');
+    console.log('Added 2 comments per article');
+    
+    console.log('✅ Seeding completed successfully!');
+    console.log(`📊 Summary: ${users.length} users, ${articles.length} articles, ${articles.length * 2} comments`);
   } catch (e) {
     console.error('Seeding failed:', e);
   }

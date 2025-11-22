@@ -71,8 +71,22 @@ app.listen(PORT, async () => {
     
     // Check if tables exist and create them if needed
     try {
-      await prisma.user.count();
+      const userCount = await prisma.user.count();
       console.info('Database tables verified');
+      
+      // Always seed if no users exist
+      if (userCount === 0) {
+        console.info('No users found, seeding dummy data...');
+        try {
+          const { execSync } = require('child_process');
+          execSync('npx prisma db seed', { stdio: 'inherit' });
+          console.info('Dummy data seeded successfully');
+        } catch (seedError) {
+          console.error('Seeding failed:', seedError.message);
+        }
+      } else {
+        console.info(`Found ${userCount} users in database`);
+      }
     } catch (error) {
       console.info('Database tables missing, creating schema...');
       try {
