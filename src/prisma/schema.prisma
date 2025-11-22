@@ -1,0 +1,102 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+model Article {
+  id          Int        @id @default(autoincrement())
+  slug        String     @unique
+  title       String
+  description String
+  body        String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now())
+  tagList     Tag[]
+  author      User       @relation("UserArticles", fields: [authorId], onDelete: Cascade, references: [id])
+  authorId    Int
+  favoritedBy User[]     @relation("UserFavorites")
+  comments    Comment[]
+  bookmarks   Bookmark[]
+}
+
+model Comment {
+  id            Int           @id @default(autoincrement())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  body          String
+  article       Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId     Int
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      Int
+  parentComment Comment?      @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  parentCommentId Int?
+  replies       Comment[]     @relation("CommentReplies")
+  votes         CommentVote[]
+  notifications Notification[]
+}
+
+model CommentVote {
+  id        Int     @id @default(autoincrement())
+  value     Int     @default(0)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+
+  @@unique([commentId, userId])
+}
+
+model Tag {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  articles Article[]
+}
+
+model User {
+  id         Int           @id @default(autoincrement())
+  email      String        @unique
+  username   String        @unique
+  password   String
+  image      String?       @default("https://api.realworld.io/images/smiley-cyrus.jpeg")
+  bio        String?
+  articles   Article[]     @relation("UserArticles")
+  favorites  Article[]     @relation("UserFavorites")
+  followedBy User[]        @relation("UserFollows")
+  following  User[]        @relation("UserFollows")
+  comments   Comment[]
+  bookmarks  Bookmark[]
+  votes      CommentVote[]
+  notifications Notification[]
+  sentNotifications Notification[] @relation("NotificationFromUser")
+  demo       Boolean       @default(false)
+}
+
+model Bookmark {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId Int
+
+  @@unique([userId, articleId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  fromUser  User?    @relation("NotificationFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  fromUserId Int?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  commentId Int?
+}
