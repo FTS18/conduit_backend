@@ -69,12 +69,19 @@ app.listen(PORT, async () => {
     console.info(`server up on port ${PORT}`);
     console.info('Database connected successfully');
     
-    // Check if tables exist by trying to count users
+    // Check if tables exist and create them if needed
     try {
       await prisma.user.count();
       console.info('Database tables verified');
     } catch (error) {
-      console.error('Database tables missing - please run migrations:', error.message);
+      console.info('Database tables missing, running migrations...');
+      try {
+        const { execSync } = require('child_process');
+        execSync('npx prisma migrate deploy --schema=./src/prisma/schema.prisma', { stdio: 'inherit' });
+        console.info('Migrations completed successfully');
+      } catch (migrationError) {
+        console.error('Migration failed:', migrationError.message);
+      }
     }
   } catch (error) {
     console.error('Database connection failed:', error);
