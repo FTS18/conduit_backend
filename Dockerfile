@@ -19,10 +19,10 @@ RUN npm install typescript ts-node @types/node
 RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
 # Build the application
-RUN npm run build
+RUN npx nx build api --configuration=production
 
 # Expose port
 EXPOSE 3000
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "dist/api/main.js"]
