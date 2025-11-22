@@ -17,11 +17,11 @@ COPY tsconfig*.json ./
 # Install dev dependencies for build
 RUN npm install typescript ts-node @types/node
 
-# Generate Prisma client
-RUN npx prisma generate --schema=./src/prisma/schema.prisma
-
 # Build the application
 RUN npx nx build api --configuration=production
+
+# Generate Prisma client for production
+RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
 # Expose port
 EXPOSE 3000
