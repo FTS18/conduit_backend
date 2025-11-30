@@ -25,7 +25,7 @@ router.get(
           username: true,
           image: true,
           bio: true,
-          following: {
+          followedBy: {
             where: currentUserId ? { id: currentUserId } : undefined,
             select: { id: true },
           },
@@ -38,7 +38,7 @@ router.get(
         username: user.username,
         image: user.image,
         bio: user.bio,
-        following: user.following.length > 0,
+        following: user.followedBy.length > 0,
       }));
 
       res.json({ users: usersWithFollowing });
