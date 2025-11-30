@@ -522,6 +522,7 @@ export const addComment = async (body: string, slug: string, id: number, parentC
     },
     select: {
       id: true,
+      authorId: true,
     },
   });
 
@@ -586,6 +587,73 @@ export const addComment = async (body: string, slug: string, id: number, parentC
           fromUser: {
             connect: {
               id: id,
+            },
+          },
+          comment: {
+            connect: {
+              id: comment.id,
+            },
+          },
+        },
+      });
+    }
+  }
+  
+  // Notify article author
+  if (article && article.authorId !== id) {
+    await prisma.notification.create({
+      data: {
+        type: 'comment',
+        message: 'commented on your article',
+        user: {
+          connect: {
+            id: article.authorId,
+          },
+        },
+        fromUser: {
+          connect: {
+            id,
+          },
+        },
+        comment: {
+          connect: {
+            id: comment.id,
+          },
+        },
+      },
+    });
+  }
+
+  // Notify parent comment author (if reply)
+  if (parentCommentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentCommentId },
+      select: { authorId: true }
+    });
+
+    if (parentComment && parentComment.authorId !== id && parentComment.authorId !== article?.authorId) {
+      // Only notify if parent author is different from current user AND different from article author (to avoid double notification if author replied to their own post's comment)
+      // Actually, usually you want both if they are different events, but here 'comment' type covers it.
+      // Let's make a distinct 'reply' notification or just use 'comment' type with different message?
+      // The frontend handles 'comment' type. Let's use 'comment' type but maybe different message?
+      // The user asked for "replied in comments noti show".
+      // Frontend `getNotificationMessage` handles 'comment' type as "commented on your article".
+      // I should probably use a new type 'reply' or just 'comment' and let the user figure it out, OR update frontend to handle 'reply'.
+      // The frontend `Notifications.js` has a default case.
+      // Let's stick to 'comment' type for now but maybe change message to "replied to your comment".
+      
+      await prisma.notification.create({
+        data: {
+          type: 'comment', // Using 'comment' type so it shows up with comment icon
+          message: 'replied to your comment',
+          user: {
+            connect: {
+              id: parentComment.authorId,
+            },
+          },
+          fromUser: {
+            connect: {
+              id,
             },
           },
           comment: {
@@ -675,6 +743,7 @@ export const favoriteArticle = async (slugPayload: string, id: number) => {
           bio: true,
           image: true,
           followedBy: true,
+          id: true,
         },
       },
       favoritedBy: true,
@@ -695,6 +764,26 @@ export const favoriteArticle = async (slugPayload: string, id: number) => {
     favoritesCount: _count?.favoritedBy,
     bookmarked: article.bookmarks ? article.bookmarks.some((bookmark: any) => bookmark.userId === id) : false,
   };
+
+  if (article.author.id !== id) {
+    await prisma.notification.create({
+      data: {
+        type: 'favorite',
+        message: 'favorited your article',
+        user: {
+          connect: {
+            id: article.author.id,
+          },
+        },
+        fromUser: {
+          connect: {
+            id,
+          },
+        },
+        comment: undefined, // No comment associated
+      },
+    });
+  }
 
   return result;
 };

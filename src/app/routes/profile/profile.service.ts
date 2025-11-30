@@ -36,6 +36,25 @@ export const followUser = async (usernamePayload: string, id: number) => {
     },
   });
 
+  if (profile.id !== id) {
+    await prisma.notification.create({
+      data: {
+        type: 'follow',
+        message: 'started following you',
+        user: {
+          connect: {
+            id: profile.id,
+          },
+        },
+        fromUser: {
+          connect: {
+            id,
+          },
+        },
+      },
+    });
+  }
+
   return profileMapper(profile, id);
 };
 
