@@ -8,7 +8,6 @@ import { Tag } from '../tag/tag.model';
 const buildFindAllQuery = (query: any, id: number | undefined) => {
   const queries: any = [];
   const orAuthorQuery = [];
-  const andAuthorQuery = [];
 
   orAuthorQuery.push({
     demo: {
@@ -24,43 +23,17 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
     });
   }
 
-  if ('author' in query) {
-    andAuthorQuery.push({
-      username: {
-        equals: query.author,
-      },
-    });
-  } else {
-    // Only apply visibility filters (demo or self) if NOT filtering by a specific author
-    // This assumes that if you are viewing a specific author's profile, you should see their articles
-    // If you want to restrict visibility of non-demo users generally, this logic needs to be different.
-    // But based on the issue "not listing articles of my user", it seems we are being too restrictive.
-    // Actually, looking at the code:
-    // orAuthorQuery.push({ demo: { equals: true } });
-    // if (id) orAuthorQuery.push({ id: { equals: id } });
-    // This implies that by default (global feed), you only see demo users or yourself.
-    // But if I go to a profile, I want to see that user's articles.
-    
-    // If query.author is set, we are on a profile page (or filtering by author).
-    // In that case, we should just respect the author filter.
-    // So, we should only add `OR: orAuthorQuery` if `query.author` is NOT set.
-    // However, `andAuthorQuery` is added to `AND`.
-    
-    // Let's restructure.
-  }
-
   const authorQuery: any = {};
 
   if ('author' in query) {
+    // When filtering by specific author, show all their articles
     authorQuery.author = {
       username: {
         equals: query.author,
       },
     };
   } else {
-    // Global feed or tag filter: restrict to demo users or current user
-    // UNLESS we want to show all users? The prompt says "dummy seeded users".
-    // If the intention of the original code was to hide non-demo users from the global feed, then:
+    // Global feed: restrict to demo users or current user
     authorQuery.author = {
       OR: orAuthorQuery,
     };
@@ -659,19 +632,9 @@ export const addComment = async (body: string, slug: string, id: number, parentC
     });
 
     if (parentComment && parentComment.authorId !== id && parentComment.authorId !== article?.authorId) {
-      // Only notify if parent author is different from current user AND different from article author (to avoid double notification if author replied to their own post's comment)
-      // Actually, usually you want both if they are different events, but here 'comment' type covers it.
-      // Let's make a distinct 'reply' notification or just use 'comment' type with different message?
-      // The frontend handles 'comment' type. Let's use 'comment' type but maybe different message?
-      // The user asked for "replied in comments noti show".
-      // Frontend `getNotificationMessage` handles 'comment' type as "commented on your article".
-      // I should probably use a new type 'reply' or just 'comment' and let the user figure it out, OR update frontend to handle 'reply'.
-      // The frontend `Notifications.js` has a default case.
-      // Let's stick to 'comment' type for now but maybe change message to "replied to your comment".
-      
       await prisma.notification.create({
         data: {
-          type: 'comment', // Using 'comment' type so it shows up with comment icon
+          type: 'comment',
           message: 'replied to your comment',
           user: {
             connect: {
@@ -807,7 +770,7 @@ export const favoriteArticle = async (slugPayload: string, id: number) => {
             id,
           },
         },
-        comment: undefined, // No comment associated
+        comment: undefined,
       },
     });
   }

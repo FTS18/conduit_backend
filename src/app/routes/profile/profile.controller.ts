@@ -6,9 +6,10 @@ import { followUser, getProfile, unfollowUser } from './profile.service';
 const router = Router();
 
 /**
- * Get all users
+ * Get all users or search users
  * @auth optional
  * @route {GET} /profiles
+ * @query search - optional search term
  * @returns users
  */
 router.get(
@@ -16,7 +17,14 @@ router.get(
   auth.optional,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const searchTerm = req.query.search as string;
       const users = await prisma.user.findMany({
+        where: searchTerm ? {
+          OR: [
+            { username: { contains: searchTerm } },
+            { bio: { contains: searchTerm } },
+          ],
+        } : undefined,
         select: {
           id: true,
           username: true,
