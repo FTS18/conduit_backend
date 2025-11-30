@@ -3,4 +3,7 @@ export interface Profile {
   bio: string;
   image: string;
   following: boolean;
+  followersCount: number;
+  followingCount: number;
+  totalArticlesCount: number;
 }
