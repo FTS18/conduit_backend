@@ -26,6 +26,56 @@ export const getProfile = async (usernamePayload: string, id?: number) => {
   return profileMapper(profile, id);
 };
 
+export const getFollowers = async (usernamePayload: string, id?: number) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      username: usernamePayload,
+    },
+    include: {
+      followedBy: {
+        select: {
+          id: true,
+          username: true,
+          bio: true,
+          image: true,
+          followedBy: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new HttpException(404, {});
+  }
+
+  return user.followedBy.map(follower => profileMapper(follower, id));
+};
+
+export const getFollowing = async (usernamePayload: string, id?: number) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      username: usernamePayload,
+    },
+    include: {
+      following: {
+        select: {
+          id: true,
+          username: true,
+          bio: true,
+          image: true,
+          followedBy: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new HttpException(404, {});
+  }
+
+  return user.following.map(followedUser => profileMapper(followedUser, id));
+};
+
 export const followUser = async (usernamePayload: string, id: number) => {
   const profile = await prisma.user.update({
     where: {

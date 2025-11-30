@@ -1,17 +1,10 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import auth from '../auth/auth';
 import prisma from '../../../prisma/prisma-client';
-import { followUser, getProfile, unfollowUser } from './profile.service';
+import { followUser, getProfile, unfollowUser, getFollowers, getFollowing } from './profile.service';
 
 const router = Router();
 
-/**
- * Get all users or search users
- * @auth optional
- * @route {GET} /profiles
- * @query search - optional search term
- * @returns users
- */
 router.get(
   '/profiles',
   auth.optional,
@@ -40,13 +33,32 @@ router.get(
   },
 );
 
-/**
- * Get profile
- * @auth optional
- * @route {GET} /profiles/:username
- * @param username string
- * @returns profile
- */
+router.get(
+  '/profiles/:username/followers',
+  auth.optional,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const followers = await getFollowers(req.params.username, req.auth?.user?.id);
+      res.json({ followers });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get(
+  '/profiles/:username/following',
+  auth.optional,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const following = await getFollowing(req.params.username, req.auth?.user?.id);
+      res.json({ following });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 router.get(
   '/profiles/:username',
   auth.optional,
@@ -60,13 +72,6 @@ router.get(
   },
 );
 
-/**
- * Follow user
- * @auth required
- * @route {POST} /profiles/:username/follow
- * @param username string
- * @returns profile
- */
 router.post(
   '/profiles/:username/follow',
   auth.required,
@@ -80,13 +85,6 @@ router.post(
   },
 );
 
-/**
- * Unfollow user
- * @auth required
- * @route {DELETE} /profiles/:username/follow
- * @param username string
- * @returns profiles
- */
 router.delete(
   '/profiles/:username/follow',
   auth.required,

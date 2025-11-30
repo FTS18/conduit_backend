@@ -1,9 +1,10 @@
 import prisma from '../../../prisma/prisma-client';
 
-export const getNotifications = async (userId: number) => {
+export const getNotifications = async (userId: number, type?: string) => {
   const notifications = await prisma.notification.findMany({
     where: {
       userId,
+      ...(type && { type }),
     },
     include: {
       fromUser: {

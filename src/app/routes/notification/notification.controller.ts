@@ -9,7 +9,8 @@ router.get(
   auth.required,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const notifications = await getNotifications(req.auth?.user?.id);
+      const type = req.query.type as string | undefined;
+      const notifications = await getNotifications(req.auth?.user?.id, type);
       res.json({ notifications });
     } catch (error) {
       next(error);

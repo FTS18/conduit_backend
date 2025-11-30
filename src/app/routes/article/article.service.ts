@@ -9,7 +9,6 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
   const queries: any = [];
 
   if ('author' in query) {
-    // Show ALL articles by this author
     queries.push({
       author: {
         username: {
@@ -18,8 +17,7 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
       },
     });
   } else {
-    // Global feed: show demo users or current user's articles
-    const orAuthorQuery = [{ demo: { equals: true } }];
+    const orAuthorQuery: any = [{ demo: { equals: true } }];
     if (id) {
       orAuthorQuery.push({ id: { equals: id } });
     }
@@ -63,6 +61,19 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
     });
   }
 
+  if ('fromDate' in query || 'toDate' in query) {
+    const dateFilter: any = {};
+    if (query.fromDate) {
+      dateFilter.gte = new Date(query.fromDate);
+    }
+    if (query.toDate) {
+      dateFilter.lte = new Date(query.toDate);
+    }
+    queries.push({
+      createdAt: dateFilter,
+    });
+  }
+
   return queries;
 };
 
@@ -78,9 +89,6 @@ export const getArticles = async (query: any, id?: number) => {
     where: { AND: andQueries },
     skip: Number(query.offset) || 0,
     take: Number(query.limit) || 10,
-    orderBy: {
-      createdAt: 'desc',
-    },
     include: {
       tagList: {
         select: {
@@ -108,8 +116,19 @@ export const getArticles = async (query: any, id?: number) => {
     },
   });
 
+  const sortedArticles = articles.sort((a, b) => {
+    const aEngagement = a._count.favoritedBy + a._count.bookmarks + a._count.comments;
+    const bEngagement = b._count.favoritedBy + b._count.bookmarks + b._count.comments;
+    
+    if (aEngagement === bEngagement) {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    
+    return bEngagement - aEngagement;
+  });
+
   return {
-    articles: articles.map((article: any) => articleMapper(article, id)),
+    articles: sortedArticles.map((article: any) => articleMapper(article, id)),
     articlesCount,
   };
 };
