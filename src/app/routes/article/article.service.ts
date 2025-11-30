@@ -17,15 +17,8 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
       },
     });
   } else {
-    const orAuthorQuery: any = [{ demo: { equals: true } }];
-    if (id) {
-      orAuthorQuery.push({ id: { equals: id } });
-    }
-    queries.push({
-      author: {
-        OR: orAuthorQuery,
-      },
-    });
+    // Show all articles in global feed
+    queries.push({});
   }
 
   if ('tag' in query) {
