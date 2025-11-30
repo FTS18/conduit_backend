@@ -11,9 +11,9 @@ export const generateArticleContent = async (title: string) => {
     const response = await axios.post(
       'https://api.replicate.com/v1/predictions',
       {
-        version: 'e5582ad7cf78c7d6d26d3a3460efc33e0681084fbf74432332b70aa1e1476cbc',
+        version: 'a16z6fc3c8e12b9f91a36ba6112a41cc1b7b9136d29fdf07afcff43c5f31ae59',
         input: {
-          prompt: `Given this article title: "${title}"\n\nGenerate:\n1. A brief description (1-2 sentences) for the article\n2. 3-5 relevant tags\n\nFormat your response as JSON:\n{\n  "description": "...",\n  "tags": ["tag1", "tag2", "tag3"]\n}`
+          prompt: `Article title: "${title}"\n\nGenerate a JSON response with:\n1. description: 1-2 sentence description\n2. tags: array of 3-5 tags\n\nRespond ONLY with valid JSON, no other text.`
         }
       },
       {
@@ -26,9 +26,11 @@ export const generateArticleContent = async (title: string) => {
 
     const predictionId = response.data.id;
     let prediction = response.data;
+    let attempts = 0;
+    const maxAttempts = 60;
     
-    while (prediction.status === 'processing') {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    while (prediction.status === 'processing' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 500));
       const statusResponse = await axios.get(
         `https://api.replicate.com/v1/predictions/${predictionId}`,
         {
@@ -38,10 +40,15 @@ export const generateArticleContent = async (title: string) => {
         }
       );
       prediction = statusResponse.data;
+      attempts++;
     }
 
     if (prediction.status === 'failed') {
-      throw new Error('Prediction failed');
+      throw new Error('Prediction failed: ' + (prediction.error || 'Unknown error'));
+    }
+
+    if (prediction.status === 'processing') {
+      throw new Error('Prediction timeout');
     }
 
     const text = Array.isArray(prediction.output) ? prediction.output.join('') : prediction.output;
@@ -58,6 +65,6 @@ export const generateArticleContent = async (title: string) => {
     };
   } catch (error: any) {
     console.error('Replicate generation error:', error.response?.data || error.message);
-    throw new Error('Failed to generate content: ' + (error.response?.data?.detail?.[0]?.msg || error.message));
+    throw new Error('Failed to generate content: ' + (error.response?.data?.detail || error.message));
   }
 };
