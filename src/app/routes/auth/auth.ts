@@ -20,7 +20,7 @@ const auth = {
     secret: process.env.JWT_SECRET || 'superSecret',
     getToken: getTokenFromHeaders,
     algorithms: ['HS256'],
-  }).unless({ path: ['/api/users/login', '/api/users'] }),
+  }).unless({ path: ['/api/users/login', '/api/users', '/api/users/login/supabase'] }),
   optional: jwt({
     secret: process.env.JWT_SECRET || 'superSecret',
     credentialsRequired: false,
