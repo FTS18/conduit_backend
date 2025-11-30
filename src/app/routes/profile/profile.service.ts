@@ -78,16 +78,24 @@ export const getFollowing = async (usernamePayload: string, id?: number) => {
 };
 
 export const followUser = async (usernamePayload: string, id: number) => {
-  const profile = await prisma.user.update({
+  // Update the current user (id) to add the target user (usernamePayload) to their 'following' list
+  await prisma.user.update({
     where: {
-      username: usernamePayload,
+      id,
     },
     data: {
-      followedBy: {
+      following: {
         connect: {
-          id,
+          username: usernamePayload,
         },
       },
+    },
+  });
+
+  // Return the profile of the user we just followed
+  const profile = await prisma.user.findUnique({
+    where: {
+      username: usernamePayload,
     },
     include: {
       followedBy: true,
@@ -102,6 +110,11 @@ export const followUser = async (usernamePayload: string, id: number) => {
     },
   });
 
+  if (!profile) {
+    throw new HttpException(404, {});
+  }
+
+  // Send notification
   if (profile.id !== id) {
     await prisma.notification.create({
       data: {
@@ -125,16 +138,24 @@ export const followUser = async (usernamePayload: string, id: number) => {
 };
 
 export const unfollowUser = async (usernamePayload: string, id: number) => {
-  const profile = await prisma.user.update({
+  // Update the current user (id) to remove the target user (usernamePayload) from their 'following' list
+  await prisma.user.update({
     where: {
-      username: usernamePayload,
+      id,
     },
     data: {
-      followedBy: {
+      following: {
         disconnect: {
-          id,
+          username: usernamePayload,
         },
       },
+    },
+  });
+
+  // Return the profile of the user we just unfollowed
+  const profile = await prisma.user.findUnique({
+    where: {
+      username: usernamePayload,
     },
     include: {
       followedBy: true,
@@ -148,6 +169,10 @@ export const unfollowUser = async (usernamePayload: string, id: number) => {
       },
     },
   });
+
+  if (!profile) {
+    throw new HttpException(404, {});
+  }
 
   return profileMapper(profile, id);
 };
