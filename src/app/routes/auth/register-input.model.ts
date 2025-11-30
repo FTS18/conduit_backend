@@ -5,4 +5,6 @@ export interface RegisterInput {
   image?: string;
   bio?: string;
   demo?: boolean;
+  location?: string;
+  website?: string;
 }
