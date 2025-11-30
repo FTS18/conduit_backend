@@ -181,3 +181,60 @@ export const updateUser = async (userPayload: any, id: number) => {
     token: generateToken(user.id),
   };
 };
+
+export const supabaseLogin = async (userPayload: any) => {
+  const email = userPayload.email?.trim();
+  const username = userPayload.username?.trim() || email.split('@')[0];
+  const image = userPayload.image;
+
+  if (!email) {
+    throw new HttpException(422, { errors: { email: ["can't be blank"] } });
+  }
+
+  let user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      bio: true,
+      image: true,
+    },
+  });
+
+  if (!user) {
+    // Create user
+    // Generate random password
+    const password = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Ensure username is unique
+    let finalUsername = username;
+    let counter = 1;
+    while (await prisma.user.findUnique({ where: { username: finalUsername } })) {
+      finalUsername = `${username}${counter}`;
+      counter++;
+    }
+
+    user = await prisma.user.create({
+      data: {
+        username: finalUsername,
+        email,
+        password: hashedPassword,
+        image,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        bio: true,
+        image: true,
+      },
+    });
+  }
+
+  return {
+    ...user,
+    token: generateToken(user.id),
+  };
+};
