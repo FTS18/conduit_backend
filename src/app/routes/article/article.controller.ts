@@ -18,6 +18,15 @@ import {
 
 const router = Router();
 
+router.post('/articles/generate', auth.required, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const content = await generateArticleContent(req.body.title);
+    res.json(content);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/articles', auth.optional, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await getArticles(req.query, req.auth?.user?.id);
@@ -43,15 +52,6 @@ router.get(
     }
   },
 );
-
-router.post('/articles/generate', auth.required, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const content = await generateArticleContent(req.body.title);
-    res.json(content);
-  } catch (error) {
-    next(error);
-  }
-});
 
 router.post('/articles', auth.required, async (req: Request, res: Response, next: NextFunction) => {
   try {
