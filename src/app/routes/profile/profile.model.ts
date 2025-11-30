@@ -6,5 +6,4 @@ export interface Profile {
   followersCount: number;
   followingCount: number;
   totalArticlesCount: number;
-  createdAt: Date;
 }
