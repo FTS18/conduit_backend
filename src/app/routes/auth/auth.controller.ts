@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import auth from './auth';
-import { createUser, getCurrentUser, login, updateUser, supabaseLogin } from './auth.service';
+import { createUser, getCurrentUser, login, updateUser, supabaseLogin, deleteUser, verifyPassword } from './auth.service';
 
 const router = Router();
 
@@ -78,6 +78,37 @@ router.put('/user', auth.required, async (req: Request, res: Response, next: Nex
   try {
     const user = await updateUser(req.body.user, req.auth?.user?.id);
     res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Verify password
+ * @auth required
+ * @route {POST} /user/verify-password
+ * @bodyparam password string
+ * @returns success boolean
+ */
+router.post('/user/verify-password', auth.required, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await verifyPassword(req.auth?.user?.id, req.body.password);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Delete user and all data
+ * @auth required
+ * @route {DELETE} /user
+ * @returns success message
+ */
+router.delete('/user', auth.required, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await deleteUser(req.auth?.user?.id);
+    res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     next(error);
   }

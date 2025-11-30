@@ -64,6 +64,8 @@ model User {
   password   String
   image      String?       @default("https://api.realworld.io/images/smiley-cyrus.jpeg")
   bio        String?
+  location   String?
+  website    String?
   articles   Article[]     @relation("UserArticles")
   favorites  Article[]     @relation("UserFavorites")
   followedBy User[]        @relation("UserFollows")

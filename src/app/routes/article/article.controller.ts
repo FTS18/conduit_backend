@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import auth from '../auth/auth';
 import prisma from '../../../prisma/prisma-client';
+import { generateArticleContent } from '../../services/ai.service';
 import {
   addComment,
   createArticle,
@@ -42,6 +43,15 @@ router.get(
     }
   },
 );
+
+router.post('/articles/generate', auth.required, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const content = await generateArticleContent(req.body.title);
+    res.json(content);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post('/articles', auth.required, async (req: Request, res: Response, next: NextFunction) => {
   try {

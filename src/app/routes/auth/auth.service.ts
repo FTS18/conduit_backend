@@ -39,7 +39,7 @@ export const createUser = async (input: RegisterInput): Promise<RegisteredUser> 
   const email = input.email?.trim();
   const username = input.username?.trim();
   const password = input.password?.trim();
-  const { image, bio, demo } = input;
+  const { image, bio, demo, location, website } = input;
 
   if (!email) {
     throw new HttpException(422, { errors: { email: ["can't be blank"] } });
@@ -64,6 +64,8 @@ export const createUser = async (input: RegisterInput): Promise<RegisteredUser> 
       password: hashedPassword,
       ...(image ? { image } : {}),
       ...(bio ? { bio } : {}),
+      ...(location ? { location } : {}),
+      ...(website ? { website } : {}),
       ...(demo ? { demo } : {}),
     },
     select: {
@@ -72,6 +74,8 @@ export const createUser = async (input: RegisterInput): Promise<RegisteredUser> 
       username: true,
       bio: true,
       image: true,
+      location: true,
+      website: true,
     },
   });
 
@@ -104,6 +108,8 @@ export const login = async (userPayload: any) => {
       password: true,
       bio: true,
       image: true,
+      location: true,
+      website: true,
     },
   });
 
@@ -116,6 +122,8 @@ export const login = async (userPayload: any) => {
         username: user.username,
         bio: user.bio,
         image: user.image,
+        location: user.location,
+        website: user.website,
         token: generateToken(user.id),
       };
     }
@@ -139,6 +147,8 @@ export const getCurrentUser = async (id: number) => {
       username: true,
       bio: true,
       image: true,
+      location: true,
+      website: true,
     },
   })) as User;
 
@@ -149,7 +159,7 @@ export const getCurrentUser = async (id: number) => {
 };
 
 export const updateUser = async (userPayload: any, id: number) => {
-  const { email, username, password, image, bio } = userPayload;
+  const { email, username, password, image, bio, location, website } = userPayload;
   let hashedPassword;
 
   if (password) {
@@ -166,6 +176,8 @@ export const updateUser = async (userPayload: any, id: number) => {
       ...(password ? { password: hashedPassword } : {}),
       ...(image ? { image } : {}),
       ...(bio ? { bio } : {}),
+      ...(location ? { location } : {}),
+      ...(website ? { website } : {}),
     },
     select: {
       id: true,
@@ -173,6 +185,8 @@ export const updateUser = async (userPayload: any, id: number) => {
       username: true,
       bio: true,
       image: true,
+      location: true,
+      website: true,
     },
   });
 
@@ -180,6 +194,30 @@ export const updateUser = async (userPayload: any, id: number) => {
     ...user,
     token: generateToken(user.id),
   };
+};
+
+export const verifyPassword = async (id: number, password: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { password: true },
+  });
+
+  if (!user) {
+    throw new HttpException(404, { errors: { user: ['not found'] } });
+  }
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    throw new HttpException(403, { errors: { password: ['is invalid'] } });
+  }
+
+  return true;
+};
+
+export const deleteUser = async (id: number) => {
+  await prisma.user.delete({
+    where: { id },
+  });
 };
 
 export const supabaseLogin = async (userPayload: any) => {
@@ -192,7 +230,6 @@ export const supabaseLogin = async (userPayload: any) => {
     throw new HttpException(422, { errors: { email: ["can't be blank"] } });
   }
 
-  // First try to find user by email
   let user = await prisma.user.findUnique({
     where: { email },
     select: {
@@ -201,16 +238,15 @@ export const supabaseLogin = async (userPayload: any) => {
       username: true,
       bio: true,
       image: true,
+      location: true,
+      website: true,
     },
   });
 
   if (!user) {
-    // Create user
-    // Generate random password
     const password = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Ensure username is unique
     let finalUsername = username;
     let counter = 1;
     while (await prisma.user.findUnique({ where: { username: finalUsername } })) {
@@ -231,6 +267,8 @@ export const supabaseLogin = async (userPayload: any) => {
         username: true,
         bio: true,
         image: true,
+        location: true,
+        website: true,
       },
     });
   }
