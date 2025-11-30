@@ -11,6 +11,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const searchTerm = req.query.search as string;
+      const currentUserId = req.auth?.user?.id;
+      
       const users = await prisma.user.findMany({
         where: searchTerm ? {
           OR: [
@@ -23,10 +25,23 @@ router.get(
           username: true,
           image: true,
           bio: true,
+          following: {
+            where: currentUserId ? { id: currentUserId } : undefined,
+            select: { id: true },
+          },
         },
         take: 100,
       });
-      res.json({ users });
+
+      const usersWithFollowing = users.map(user => ({
+        id: user.id,
+        username: user.username,
+        image: user.image,
+        bio: user.bio,
+        following: user.following.length > 0,
+      }));
+
+      res.json({ users: usersWithFollowing });
     } catch (error) {
       next(error);
     }
