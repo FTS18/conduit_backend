@@ -186,11 +186,13 @@ export const supabaseLogin = async (userPayload: any) => {
   const email = userPayload.email?.trim();
   const username = userPayload.username?.trim() || email.split('@')[0];
   const image = userPayload.image;
+  const supabaseId = userPayload.supabaseId;
 
   if (!email) {
     throw new HttpException(422, { errors: { email: ["can't be blank"] } });
   }
 
+  // First try to find user by email
   let user = await prisma.user.findUnique({
     where: { email },
     select: {
