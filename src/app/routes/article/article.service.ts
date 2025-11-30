@@ -7,39 +7,28 @@ import { Tag } from '../tag/tag.model';
 
 const buildFindAllQuery = (query: any, id: number | undefined) => {
   const queries: any = [];
-  const orAuthorQuery = [];
 
-  orAuthorQuery.push({
-    demo: {
-      equals: true,
-    },
-  });
-
-  if (id) {
-    orAuthorQuery.push({
-      id: {
-        equals: id,
+  if ('author' in query) {
+    // Show ALL articles by this author
+    queries.push({
+      author: {
+        username: {
+          equals: query.author,
+        },
+      },
+    });
+  } else {
+    // Global feed: show demo users or current user's articles
+    const orAuthorQuery = [{ demo: { equals: true } }];
+    if (id) {
+      orAuthorQuery.push({ id: { equals: id } });
+    }
+    queries.push({
+      author: {
+        OR: orAuthorQuery,
       },
     });
   }
-
-  const authorQuery: any = {};
-
-  if ('author' in query) {
-    // When filtering by specific author, show all their articles
-    authorQuery.author = {
-      username: {
-        equals: query.author,
-      },
-    };
-  } else {
-    // Global feed: restrict to demo users or current user
-    authorQuery.author = {
-      OR: orAuthorQuery,
-    };
-  }
-
-  queries.push(authorQuery);
 
   if ('tag' in query) {
     queries.push({
@@ -66,10 +55,10 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
   if ('search' in query && query.search) {
     queries.push({
       OR: [
-        { title: { contains: query.search } },
-        { description: { contains: query.search } },
-        { body: { contains: query.search } },
-        { author: { username: { contains: query.search } } },
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+        { body: { contains: query.search, mode: 'insensitive' } },
+        { author: { username: { contains: query.search, mode: 'insensitive' } } },
       ],
     });
   }
@@ -89,6 +78,9 @@ export const getArticles = async (query: any, id?: number) => {
     where: { AND: andQueries },
     skip: Number(query.offset) || 0,
     take: Number(query.limit) || 10,
+    orderBy: {
+      createdAt: 'desc',
+    },
     include: {
       tagList: {
         select: {
@@ -116,21 +108,8 @@ export const getArticles = async (query: any, id?: number) => {
     },
   });
 
-  // Sort by engagement algorithm: favorites + bookmarks + comments
-  const sortedArticles = articles.sort((a, b) => {
-    const aEngagement = a._count.favoritedBy + a._count.bookmarks + a._count.comments;
-    const bEngagement = b._count.favoritedBy + b._count.bookmarks + b._count.comments;
-    
-    // If engagement is equal, sort by creation date (newer first)
-    if (aEngagement === bEngagement) {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-    
-    return bEngagement - aEngagement;
-  });
-
   return {
-    articles: sortedArticles.map((article: any) => articleMapper(article, id)),
+    articles: articles.map((article: any) => articleMapper(article, id)),
     articlesCount,
   };
 };
@@ -317,7 +296,7 @@ const disconnectArticlesTags = async (slug: string) => {
 export const updateArticle = async (article: any, slug: string, id: number) => {
   let newSlug = null;
 
-  const existingArticle = await await prisma.article.findFirst({
+  const existingArticle = await prisma.article.findFirst({
     where: {
       slug,
     },
@@ -412,7 +391,7 @@ export const updateArticle = async (article: any, slug: string, id: number) => {
 };
 
 export const deleteArticle = async (slug: string, id: number) => {
-  const existingArticle = await await prisma.article.findFirst({
+  const existingArticle = await prisma.article.findFirst({
     where: {
       slug,
     },
@@ -599,7 +578,6 @@ export const addComment = async (body: string, slug: string, id: number, parentC
     }
   }
   
-  // Notify article author
   if (article && article.authorId !== id) {
     await prisma.notification.create({
       data: {
@@ -624,7 +602,6 @@ export const addComment = async (body: string, slug: string, id: number, parentC
     });
   }
 
-  // Notify parent comment author (if reply)
   if (parentCommentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: parentCommentId },
