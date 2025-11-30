@@ -11,6 +11,7 @@ const profileMapper = (user: any, id: number | undefined): Profile => ({
   followersCount: user._count?.followedBy || 0,
   followingCount: user._count?.following || 0,
   totalArticlesCount: user._count?.articles || 0,
+  createdAt: user.createdAt,
 });
 
 export default profileMapper;

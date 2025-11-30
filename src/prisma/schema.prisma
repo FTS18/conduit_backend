@@ -62,6 +62,7 @@ model User {
   email      String        @unique
   username   String        @unique
   password   String
+  createdAt  DateTime      @default(now())
   image      String?       @default("https://api.realworld.io/images/smiley-cyrus.jpeg")
   bio        String?
   articles   Article[]     @relation("UserArticles")
