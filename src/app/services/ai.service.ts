@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -8,25 +8,18 @@ export const generateArticleContent = async (title: string) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{
+            text: `Given this article title: "${title}"\n\nGenerate:\n1. A brief description (1-2 paragraphs 8-9 lines each) for the article\n2. 3-5 relevant tags\n\nFormat your response as JSON:\n{\n  "description": "...",\n  "tags": ["tag1", "tag2", "tag3"]\n}`
+          }]
+        }]
+      }
+    );
 
-    const prompt = `Given this article title: "${title}"
-
-Generate:
-1. A brief description (1-2 sentences) for the article
-2. 3-5 relevant tags
-
-Format your response as JSON:
-{
-  "description": "...",
-  "tags": ["tag1", "tag2", "tag3"]
-}`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
+    const text = response.data.candidates[0].content.parts[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {
