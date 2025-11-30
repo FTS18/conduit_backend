@@ -137,7 +137,7 @@ export const login = async (userPayload: any) => {
 };
 
 export const getCurrentUser = async (id: number) => {
-  const user = (await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: {
       id,
     },
@@ -150,7 +150,11 @@ export const getCurrentUser = async (id: number) => {
       location: true,
       website: true,
     },
-  })) as User;
+  });
+
+  if (!user) {
+    throw new HttpException(404, { errors: { user: ['not found'] } });
+  }
 
   return {
     ...user,
