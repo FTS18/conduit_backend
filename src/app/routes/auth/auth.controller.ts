@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import auth from './auth';
 import { createUser, getCurrentUser, login, updateUser } from './auth.service';
+import { syncSupabaseUser } from './supabase-auth.service';
 
 const router = Router();
 
@@ -61,6 +62,26 @@ router.get('/user', auth.required, async (req: Request, res: Response, next: Nex
 router.put('/user', auth.required, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await updateUser(req.body.user, req.auth?.user?.id);
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Sync Supabase OAuth user
+ * @auth none
+ * @route {POST} /auth/supabase
+ * @bodyparam user Supabase user object
+ * @returns user User
+ */
+router.post('/auth/supabase', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabaseUser = req.body.user;
+    if (!supabaseUser) {
+      throw new Error('Supabase user data is required');
+    }
+    const user = await syncSupabaseUser(supabaseUser);
     res.json({ user });
   } catch (error) {
     next(error);
