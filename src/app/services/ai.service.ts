@@ -37,8 +37,14 @@ export const generateArticleContent = async (title: string) => {
       description: parsed.description || '',
       tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : []
     };
-  } catch (error) {
-    console.error('OpenAI generation error:', error);
-    throw new Error('Failed to generate content');
+  } catch (error: any) {
+    console.error('OpenAI generation error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      throw new Error('OpenAI API key is invalid or expired');
+    }
+    if (error.response?.status === 429) {
+      throw new Error('OpenAI rate limit exceeded or quota exceeded');
+    }
+    throw new Error('Failed to generate content: ' + (error.response?.data?.error?.message || error.message));
   }
 };
