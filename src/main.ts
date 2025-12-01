@@ -105,6 +105,8 @@ app.use(
 ); // Apply rate limiting
 app.use(validateContentLength(1048576)); // 1MB max payload
 app.use(sanitizeInputMiddleware); // Prevent XSS attacks
+
+// Optimized CORS configuration to reduce preflight requests
 app.use(
   cors({
     origin: [
@@ -113,10 +115,28 @@ app.use(
       'https://pecathon.vercel.app',
     ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['X-Total-Count', 'X-Cache', 'X-API-Version', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+    maxAge: 86400, // Cache preflight for 24 hours
+    preflightContinue: false, // Return 200 for preflight
   })
 );
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Add cache headers to improve client-side caching
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Cache GET requests
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=60, must-revalidate');
+  } else {
+    // Don't cache mutations
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+  next();
+});
+
 app.use(cacheMiddleware); // Apply caching middleware
 app.use(routes);
 
@@ -155,7 +175,7 @@ app.use(
     } else if (err) {
       res.status(500).json(err.message);
     }
-  }
+  },
 );
 
 /**
