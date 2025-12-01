@@ -468,53 +468,90 @@ const formatComment = (comment: any, userId?: number): any => ({
       (follow: any) => follow.id === userId
     ),
   },
-  upvotes: comment.votes.filter((v: any) => v.value === 1).length,
-  downvotes: comment.votes.filter((v: any) => v.value === -1).length,
-  userVote: comment.votes.find((v: any) => v.userId === userId)?.value || 0,
+  upvotes: comment.votes?.filter((v: any) => v.value === 1).length || 0,
+  downvotes: comment.votes?.filter((v: any) => v.value === -1).length || 0,
+  userVote: comment.votes?.find((v: any) => v.userId === userId)?.value || 0,
   replies: comment.replies
     ? comment.replies.map((r: any) => formatComment(r, userId))
     : [],
 });
 
-export const getCommentsByArticle = async (slug: string, id?: number) => {
-  const comments = await prisma.article.findUnique({
+// Recursive function to fetch nested replies with votes
+const fetchCommentsRecursive = async (parentCommentId: number | null = null): Promise<any[]> => {
+  const comments = await prisma.comment.findMany({
     where: {
-      slug,
+      parentCommentId: parentCommentId,
     },
     include: {
-      comments: {
-        where: {
-          parentCommentId: null,
-        },
-        include: {
-          author: {
-            select: {
-              username: true,
-              bio: true,
-              image: true,
-              followedBy: true,
-            },
-          },
-          votes: true,
-          replies: {
-            include: {
-              author: {
-                select: {
-                  username: true,
-                  bio: true,
-                  image: true,
-                  followedBy: true,
-                },
-              },
-              votes: true,
-            },
-          },
+      author: {
+        select: {
+          username: true,
+          bio: true,
+          image: true,
+          followedBy: true,
         },
       },
+      votes: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
     },
   });
 
-  const result = comments?.comments.map((comment: any) =>
+  // Recursively fetch replies for each comment
+  return Promise.all(
+    comments.map(async (comment) => ({
+      ...comment,
+      replies: await fetchCommentsRecursive(comment.id),
+    }))
+  );
+};
+
+export const getCommentsByArticle = async (slug: string, id?: number) => {
+  const article = await prisma.article.findUnique({
+    where: {
+      slug,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!article) {
+    return [];
+  }
+
+  // Fetch only top-level comments (parentCommentId is null) for this article
+  const comments = await prisma.comment.findMany({
+    where: {
+      articleId: article.id,
+      parentCommentId: null,
+    },
+    include: {
+      author: {
+        select: {
+          username: true,
+          bio: true,
+          image: true,
+          followedBy: true,
+        },
+      },
+      votes: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Recursively fetch replies for each top-level comment
+  const commentsWithReplies = await Promise.all(
+    comments.map(async (comment) => ({
+      ...comment,
+      replies: await fetchCommentsRecursive(comment.id),
+    }))
+  );
+
+  const result = commentsWithReplies.map((comment: any) =>
     formatComment(comment, id)
   );
   return result;
