@@ -14,14 +14,16 @@ const app = express();
  * App Configuration
  */
 
-app.use(cors({
-  origin: [
-    'http://localhost:4100', 
-    'http://localhost:3000',
-    'https://pecathon.vercel.app'
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      'http://localhost:4100',
+      'http://localhost:3000',
+      'https://pecathon.vercel.app',
+    ],
+    credentials: true,
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(routes);
@@ -39,7 +41,7 @@ app.use(
     err: Error | HttpException,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction,
+    next: express.NextFunction
   ) => {
     // @ts-ignore
     if (err && err.name === 'UnauthorizedError') {
@@ -61,7 +63,7 @@ app.use(
     } else if (err) {
       res.status(500).json(err.message);
     }
-  },
+  }
 );
 
 /**
@@ -75,12 +77,12 @@ app.listen(PORT, async () => {
     await prisma.$connect();
     console.info(`server up on port ${PORT}`);
     console.info('Database connected successfully');
-    
+
     // Check if tables exist and create them if needed
     try {
       const userCount = await prisma.user.count();
       console.info('Database tables verified');
-      
+
       // Always seed if fewer than 4 users exist
       if (userCount < 4) {
         console.info(`Only ${userCount} users found, seeding dummy data...`);
@@ -98,9 +100,12 @@ app.listen(PORT, async () => {
       console.info('Database tables missing, creating schema...');
       try {
         const { execSync } = require('child_process');
-        execSync('npx prisma db push --schema=./src/prisma/schema.prisma --accept-data-loss', { stdio: 'inherit' });
+        execSync(
+          'npx prisma db push --schema=./src/prisma/schema.prisma --accept-data-loss',
+          { stdio: 'inherit' }
+        );
         console.info('Database schema created successfully');
-        
+
         // Seed dummy data
         console.info('Seeding dummy data...');
         execSync('npx prisma db seed', { stdio: 'inherit' });

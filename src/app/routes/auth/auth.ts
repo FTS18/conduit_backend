@@ -2,10 +2,11 @@ import { expressjwt as jwt } from 'express-jwt';
 import * as express from 'express';
 
 const getTokenFromHeaders = (req: express.Request): string | null => {
-
   if (
-    (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Token') ||
-    (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer')
+    (req.headers.authorization &&
+      req.headers.authorization.split(' ')[0] === 'Token') ||
+    (req.headers.authorization &&
+      req.headers.authorization.split(' ')[0] === 'Bearer')
   ) {
     const token = req.headers.authorization.split(' ')[1];
 
@@ -16,9 +17,13 @@ const getTokenFromHeaders = (req: express.Request): string | null => {
 };
 
 // Custom middleware to handle both HS256 and RS256 tokens
-const optionalAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const optionalAuthMiddleware = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
   const token = getTokenFromHeaders(req);
-  
+
   if (!token) {
     return next(); // No token, continue without auth
   }
@@ -47,7 +52,9 @@ const auth = {
     secret: process.env.JWT_SECRET || 'superSecret',
     getToken: getTokenFromHeaders,
     algorithms: ['HS256'],
-  }).unless({ path: ['/api/users/login', '/api/users', '/api/users/login/supabase'] }),
+  }).unless({
+    path: ['/api/users/login', '/api/users', '/api/users/login/supabase'],
+  }),
   optional: optionalAuthMiddleware,
 };
 
@@ -55,7 +62,5 @@ const auth = {
 process.on('unhandledRejection', (reason, promise) => {
   console.log('JWT Error:', reason);
 });
-
-
 
 export default auth;
