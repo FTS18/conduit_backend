@@ -64,7 +64,10 @@ export const setCachedQuery = <T = any>(
 /**
  * Invalidate specific cache key
  */
-export const invalidateCache = (query: string, params?: Record<string, any>): void => {
+export const invalidateCache = (
+  query: string,
+  params?: Record<string, any>
+): void => {
   const key = generateCacheKey(query, params);
   queryCache.delete(key);
 };
@@ -98,7 +101,7 @@ export const clearAllCache = (): void => {
  */
 export const getCacheStats = () => {
   let totalSize = 0;
-  queryCache.forEach(cached => {
+  queryCache.forEach((cached) => {
     totalSize += JSON.stringify(cached.data).length;
   });
 
@@ -138,6 +141,8 @@ setInterval(() => {
 setInterval(() => {
   const stats = getCacheStats();
   if (stats.entries > 400) {
-    console.warn(`[CACHE] Query cache is large: ${stats.entries} entries, ${stats.approximateSizeKB}KB`);
+    console.warn(
+      `[CACHE] Query cache is large: ${stats.entries} entries, ${stats.approximateSizeKB}KB`
+    );
   }
 }, 5 * 60 * 1000);

@@ -90,10 +90,16 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
 
 export const getArticles = async (query: any, id?: number) => {
   // Check cache for full list requests (first page, no filters)
-  const isCacheable = !query.author && !query.tag && !query.favorited && !query.search && !query.fromDate && !query.toDate;
+  const isCacheable =
+    !query.author &&
+    !query.tag &&
+    !query.favorited &&
+    !query.search &&
+    !query.fromDate &&
+    !query.toDate;
   const offset = Number(query.offset) || 0;
   const limit = Math.min(Number(query.limit) || 10, 100);
-  
+
   if (isCacheable && offset === 0 && limit === 10) {
     const cacheKey = `articles:list:page1:user${id || 'anon'}`;
     const cached = getCachedQuery(cacheKey);

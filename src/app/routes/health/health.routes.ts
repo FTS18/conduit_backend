@@ -7,39 +7,42 @@ const router = express.Router();
  * Health check endpoint
  * Returns server, database, and cache status
  */
-router.get('/api/health', async (req: express.Request, res: express.Response) => {
-  try {
-    const startTime = Date.now();
+router.get(
+  '/api/health',
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const startTime = Date.now();
 
-    // Check database connection
-    await prisma.$queryRaw`SELECT 1`;
-    const dbTime = Date.now() - startTime;
+      // Check database connection
+      await prisma.$queryRaw`SELECT 1`;
+      const dbTime = Date.now() - startTime;
 
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: {
-        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      },
-      database: {
-        status: 'connected',
-        responseTime: `${dbTime}ms`,
-      },
-      environment: process.env.NODE_ENV || 'development',
-    });
-  } catch (error: any) {
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message,
-      database: {
-        status: 'disconnected',
-      },
-    });
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: {
+          heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        },
+        database: {
+          status: 'connected',
+          responseTime: `${dbTime}ms`,
+        },
+        environment: process.env.NODE_ENV || 'development',
+      });
+    } catch (error: any) {
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        database: {
+          status: 'disconnected',
+        },
+      });
+    }
   }
-});
+);
 
 /**
  * Analytics endpoint
