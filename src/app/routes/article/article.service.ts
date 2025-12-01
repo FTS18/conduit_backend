@@ -49,7 +49,9 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
         { title: { contains: query.search, mode: 'insensitive' } },
         { description: { contains: query.search, mode: 'insensitive' } },
         { body: { contains: query.search, mode: 'insensitive' } },
-        { author: { username: { contains: query.search, mode: 'insensitive' } } },
+        {
+          author: { username: { contains: query.search, mode: 'insensitive' } },
+        },
       ],
     });
   }
@@ -126,13 +128,15 @@ export const getArticles = async (query: any, id?: number) => {
   });
 
   const sortedArticles = articles.sort((a, b) => {
-    const aEngagement = a._count.favoritedBy + a._count.bookmarks + a._count.comments;
-    const bEngagement = b._count.favoritedBy + b._count.bookmarks + b._count.comments;
-    
+    const aEngagement =
+      a._count.favoritedBy + a._count.bookmarks + a._count.comments;
+    const bEngagement =
+      b._count.favoritedBy + b._count.bookmarks + b._count.comments;
+
     if (aEngagement === bEngagement) {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-    
+
     return bEngagement - aEngagement;
   });
 
@@ -201,7 +205,9 @@ export const createArticle = async (article: any, id: number) => {
   }
 
   if (!description) {
-    throw new HttpException(422, { errors: { description: ["can't be blank"] } });
+    throw new HttpException(422, {
+      errors: { description: ["can't be blank"] },
+    });
   }
 
   if (!body) {
@@ -458,12 +464,16 @@ const formatComment = (comment: any, userId?: number): any => ({
     username: comment.author.username,
     bio: comment.author.bio,
     image: comment.author.image,
-    following: comment.author.followedBy.some((follow: any) => follow.id === userId),
+    following: comment.author.followedBy.some(
+      (follow: any) => follow.id === userId
+    ),
   },
   upvotes: comment.votes.filter((v: any) => v.value === 1).length,
   downvotes: comment.votes.filter((v: any) => v.value === -1).length,
   userVote: comment.votes.find((v: any) => v.userId === userId)?.value || 0,
-  replies: comment.replies ? comment.replies.map((r: any) => formatComment(r, userId)) : [],
+  replies: comment.replies
+    ? comment.replies.map((r: any) => formatComment(r, userId))
+    : [],
 });
 
 export const getCommentsByArticle = async (slug: string, id?: number) => {
@@ -504,7 +514,9 @@ export const getCommentsByArticle = async (slug: string, id?: number) => {
     },
   });
 
-  const result = comments?.comments.map((comment: any) => formatComment(comment, id));
+  const result = comments?.comments.map((comment: any) =>
+    formatComment(comment, id)
+  );
   return result;
 };
 
@@ -518,7 +530,12 @@ const extractMentions = (text: string): string[] => {
   return [...new Set(mentions)];
 };
 
-export const addComment = async (body: string, slug: string, id: number, parentCommentId?: number) => {
+export const addComment = async (
+  body: string,
+  slug: string,
+  id: number,
+  parentCommentId?: number
+) => {
   if (!body) {
     throw new HttpException(422, { errors: { body: ["can't be blank"] } });
   }
@@ -605,7 +622,7 @@ export const addComment = async (body: string, slug: string, id: number, parentC
       });
     }
   }
-  
+
   if (article && article.authorId !== id) {
     await prisma.notification.create({
       data: {
@@ -633,10 +650,14 @@ export const addComment = async (body: string, slug: string, id: number, parentC
   if (parentCommentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: parentCommentId },
-      select: { authorId: true }
+      select: { authorId: true },
     });
 
-    if (parentComment && parentComment.authorId !== id && parentComment.authorId !== article?.authorId) {
+    if (
+      parentComment &&
+      parentComment.authorId !== id &&
+      parentComment.authorId !== article?.authorId
+    ) {
       await prisma.notification.create({
         data: {
           type: 'comment',
@@ -670,7 +691,9 @@ export const addComment = async (body: string, slug: string, id: number, parentC
       username: comment.author.username,
       bio: comment.author.bio,
       image: comment.author.image,
-      following: comment.author.followedBy.some((follow: any) => follow.id === id),
+      following: comment.author.followedBy.some(
+        (follow: any) => follow.id === id
+      ),
     },
     upvotes: comment.votes.filter((v: any) => v.value === 1).length,
     downvotes: comment.votes.filter((v: any) => v.value === -1).length,
@@ -755,9 +778,13 @@ export const favoriteArticle = async (slugPayload: string, id: number) => {
     ...article,
     author: profileMapper(article.author, id),
     tagList: article?.tagList.map((tag: Tag) => tag.name),
-    favorited: article.favoritedBy.some((favorited: any) => favorited.id === id),
+    favorited: article.favoritedBy.some(
+      (favorited: any) => favorited.id === id
+    ),
     favoritesCount: _count?.favoritedBy,
-    bookmarked: article.bookmarks ? article.bookmarks.some((bookmark: any) => bookmark.userId === id) : false,
+    bookmarked: article.bookmarks
+      ? article.bookmarks.some((bookmark: any) => bookmark.userId === id)
+      : false,
   };
 
   if (article.author.id !== id) {
@@ -823,9 +850,13 @@ export const unfavoriteArticle = async (slugPayload: string, id: number) => {
     ...article,
     author: profileMapper(article.author, id),
     tagList: article?.tagList.map((tag: Tag) => tag.name),
-    favorited: article.favoritedBy.some((favorited: any) => favorited.id === id),
+    favorited: article.favoritedBy.some(
+      (favorited: any) => favorited.id === id
+    ),
     favoritesCount: _count?.favoritedBy,
-    bookmarked: article.bookmarks ? article.bookmarks.some((bookmark: any) => bookmark.userId === id) : false,
+    bookmarked: article.bookmarks
+      ? article.bookmarks.some((bookmark: any) => bookmark.userId === id)
+      : false,
   };
 
   return result;
