@@ -228,7 +228,6 @@ export const supabaseLogin = async (userPayload: any) => {
   const email = userPayload.email?.trim();
   const username = userPayload.username?.trim() || email.split('@')[0];
   const image = userPayload.image;
-  const supabaseId = userPayload.supabaseId;
 
   if (!email) {
     throw new HttpException(422, { errors: { email: ["can't be blank"] } });
@@ -263,7 +262,7 @@ export const supabaseLogin = async (userPayload: any) => {
         username: finalUsername,
         email,
         password: hashedPassword,
-        image,
+        image: image || `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
       },
       select: {
         id: true,
