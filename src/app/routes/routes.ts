@@ -5,8 +5,10 @@ import authController from './auth/auth.controller';
 import profileController from './profile/profile.controller';
 import bookmarkRoutes from './bookmark/bookmark.routes';
 import notificationController from './notification/notification.controller';
+import healthRoutes from './health/health.routes';
 
 const api = Router()
+  .use(healthRoutes) // Health, analytics, metrics endpoints
   .use(tagsController)
   .use(articlesController)
   .use(profileController)

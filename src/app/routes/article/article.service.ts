@@ -4,6 +4,11 @@ import HttpException from '../../models/http-exception.model';
 import profileMapper from '../profile/profile.utils';
 import articleMapper from './article.mapper';
 import { Tag } from '../tag/tag.model';
+import {
+  getCachedQuery,
+  setCachedQuery,
+  invalidateCacheByPattern,
+} from '../../services/query-cache.service';
 
 const buildFindAllQuery = (query: any, id: number | undefined) => {
   const queries: any = [];
@@ -84,9 +89,20 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
 };
 
 export const getArticles = async (query: any, id?: number) => {
-  const andQueries = buildFindAllQuery(query, id);
+  // Check cache for full list requests (first page, no filters)
+  const isCacheable = !query.author && !query.tag && !query.favorited && !query.search && !query.fromDate && !query.toDate;
   const offset = Number(query.offset) || 0;
-  const limit = Math.min(Number(query.limit) || 10, 100); // Cap at 100 for safety
+  const limit = Math.min(Number(query.limit) || 10, 100);
+  
+  if (isCacheable && offset === 0 && limit === 10) {
+    const cacheKey = `articles:list:page1:user${id || 'anon'}`;
+    const cached = getCachedQuery(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const andQueries = buildFindAllQuery(query, id);
 
   // Parallel database calls for count and articles
   const [articlesCount, articles] = await Promise.all([
@@ -151,10 +167,18 @@ export const getArticles = async (query: any, id?: number) => {
     }),
   ]);
 
-  return {
+  const result = {
     articles: articles.map((article: any) => articleMapper(article, id)),
     articlesCount,
   };
+
+  // Cache first page results for 5 minutes (articles change frequently)
+  if (isCacheable && offset === 0 && limit === 10) {
+    const cacheKey = `articles:list:page1:user${id || 'anon'}`;
+    setCachedQuery(cacheKey, result, 5 * 60 * 1000);
+  }
+
+  return result;
 };
 
 export const getFeed = async (offset: number, limit: number, id: number) => {
@@ -285,6 +309,10 @@ export const createArticle = async (article: any, id: number) => {
       },
     },
   });
+
+  // Invalidate article list cache when new article is created
+  invalidateCacheByPattern('^articles:list');
+  invalidateCacheByPattern('^tags:');
 
   return articleMapper(createdArticle, id);
 };
