@@ -66,13 +66,13 @@ export const getUnreadCount = async (userId: number) => {
   return count;
 };
 
-
 export const createNotification = async (userId: number, type: string, data: any, fromUserId: number) => {
+  const message = typeof data === 'string' ? data : JSON.stringify(data);
   const notification = await prisma.notification.create({
     data: {
       userId,
       type,
-      data: JSON.stringify(data),
+      message,
       fromUserId,
       read: false,
     },
