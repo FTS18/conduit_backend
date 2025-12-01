@@ -343,7 +343,12 @@ export const getArticle = async (slug: string, id?: number) => {
         },
       },
       favoritedBy: true,
-      bookmarks: true,
+      bookmarks: id
+        ? {
+            where: { userId: id },
+            select: { id: true },
+          }
+        : undefined,
       _count: {
         select: {
           favoritedBy: true,
