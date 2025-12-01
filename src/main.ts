@@ -43,10 +43,17 @@ app.use(
   ) => {
     // @ts-ignore
     if (err && err.name === 'UnauthorizedError') {
-      return res.status(401).json({
-        status: 'error',
-        message: 'missing authorization credentials',
-      });
+      // Only return 401 if auth was required
+      // For optional auth, just continue
+      // @ts-ignore
+      if (err.code === 'credentials_required') {
+        return res.status(401).json({
+          status: 'error',
+          message: 'missing authorization credentials',
+        });
+      }
+      // For optional auth, skip the error and continue
+      return next();
       // @ts-ignore
     } else if (err && err.errorCode) {
       // @ts-ignore

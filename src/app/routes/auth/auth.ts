@@ -15,18 +15,40 @@ const getTokenFromHeaders = (req: express.Request): string | null => {
   return null;
 };
 
+// Custom middleware to handle both HS256 and RS256 tokens
+const optionalAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const token = getTokenFromHeaders(req);
+  
+  if (!token) {
+    return next(); // No token, continue without auth
+  }
+
+  // Try HS256 first (custom JWT)
+  jwt({
+    secret: process.env.JWT_SECRET || 'superSecret',
+    credentialsRequired: false,
+    getToken: getTokenFromHeaders,
+    algorithms: ['HS256'],
+  })(req, res, (err) => {
+    if (!err) {
+      return next(); // HS256 token is valid
+    }
+
+    // HS256 failed, but that's ok for optional auth
+    // Supabase tokens will be handled by Supabase client on frontend
+    // Just continue without req.auth
+    req.auth = undefined;
+    next();
+  });
+};
+
 const auth = {
   required: jwt({
     secret: process.env.JWT_SECRET || 'superSecret',
     getToken: getTokenFromHeaders,
     algorithms: ['HS256'],
   }).unless({ path: ['/api/users/login', '/api/users', '/api/users/login/supabase'] }),
-  optional: jwt({
-    secret: process.env.JWT_SECRET || 'superSecret',
-    credentialsRequired: false,
-    getToken: getTokenFromHeaders,
-    algorithms: ['HS256'],
-  }),
+  optional: optionalAuthMiddleware,
 };
 
 // Add error handler for JWT
