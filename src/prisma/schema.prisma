@@ -121,7 +121,3 @@ model Notification {
   @@index([read])
   @@index([createdAt])
 }
-  fromUserId Int?
-  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
-  commentId Int?
-}

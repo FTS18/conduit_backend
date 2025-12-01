@@ -74,74 +74,74 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
 
 export const getArticles = async (query: any, id?: number) => {
   const andQueries = buildFindAllQuery(query, id);
-  const articlesCount = await prisma.article.count({
-    where: {
-      AND: andQueries,
-    },
-  });
+  const offset = Number(query.offset) || 0;
+  const limit = Math.min(Number(query.limit) || 10, 100); // Cap at 100 for safety
 
-  const articles = await prisma.article.findMany({
-    where: { AND: andQueries },
-    skip: Number(query.offset) || 0,
-    take: Number(query.limit) || 10,
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-      createdAt: true,
-      updatedAt: true,
-      authorId: true,
-      tagList: {
-        select: {
-          name: true,
-        },
+  // Parallel database calls for count and articles
+  const [articlesCount, articles] = await Promise.all([
+    prisma.article.count({
+      where: {
+        AND: andQueries,
       },
-      author: {
-        select: {
-          username: true,
-          bio: true,
-          image: true,
-          followedBy: {
-            where: id ? { id: id } : undefined,
-            select: { id: true },
+    }),
+    prisma.article.findMany({
+      where: { AND: andQueries },
+      skip: offset,
+      take: limit,
+      orderBy: [
+        { createdAt: 'desc' }, // Sort by date at DB level for efficiency
+      ],
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
+        tagList: {
+          select: {
+            name: true,
+          },
+        },
+        author: {
+          select: {
+            username: true,
+            bio: true,
+            image: true,
+            followedBy: id
+              ? {
+                  where: { id: id },
+                  select: { id: true },
+                }
+              : undefined,
+          },
+        },
+        favoritedBy: id
+          ? {
+              where: { id: id },
+              select: { id: true },
+            }
+          : undefined,
+        bookmarks: id
+          ? {
+              where: { userId: id },
+              select: { id: true },
+            }
+          : undefined,
+        _count: {
+          select: {
+            favoritedBy: true,
+            bookmarks: true,
+            comments: true,
           },
         },
       },
-      favoritedBy: {
-        where: id ? { id: id } : undefined,
-        select: { id: true },
-      },
-      bookmarks: {
-        where: id ? { userId: id } : undefined,
-        select: { id: true },
-      },
-      comments: true,
-      _count: {
-        select: {
-          favoritedBy: true,
-          bookmarks: true,
-          comments: true,
-        },
-      },
-    },
-  });
-
-  const sortedArticles = articles.sort((a, b) => {
-    const aEngagement =
-      a._count.favoritedBy + a._count.bookmarks + a._count.comments;
-    const bEngagement =
-      b._count.favoritedBy + b._count.bookmarks + b._count.comments;
-
-    if (aEngagement === bEngagement) {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-
-    return bEngagement - aEngagement;
-  });
+    }),
+  ]);
 
   return {
-    articles: sortedArticles.map((article: any) => articleMapper(article, id)),
+    articles: articles.map((article: any) => articleMapper(article, id)),
     articlesCount,
   };
 };

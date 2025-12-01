@@ -5,17 +5,62 @@ import * as bodyParser from 'body-parser';
 import routes from './app/routes/routes';
 import HttpException from './app/models/http-exception.model';
 import { PrismaClient } from '@prisma/client';
+import { rateLimit } from './app/middleware/rate-limit.middleware';
 
 // Initialize Prisma
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+});
 
 const app = express();
+
+/**
+ * Request Cache Middleware - Cache GET requests for 60 seconds
+ */
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 60000; // 60 seconds
+
+const cacheMiddleware = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  if (req.method !== 'GET') {
+    return next();
+  }
+
+  const cacheKey = `${req.path}?${new URLSearchParams(req.query as any).toString()}`;
+  const cachedResponse = requestCache.get(cacheKey);
+
+  if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_DURATION) {
+    res.set('X-Cache', 'HIT');
+    return res.json(cachedResponse.data);
+  }
+
+  // Store original json method
+  const originalJson = res.json.bind(res);
+
+  // Override json to cache responses
+  res.json = function (data: any) {
+    requestCache.set(cacheKey, { data, timestamp: Date.now() });
+    res.set('X-Cache', 'MISS');
+    return originalJson(data);
+  };
+
+  next();
+};
 
 /**
  * App Configuration
  */
 
 app.use(compression()); // Enable gzip compression
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 100, // 100 requests per window
+  })
+); // Apply rate limiting
 app.use(
   cors({
     origin: [
@@ -28,6 +73,7 @@ app.use(
 );
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cacheMiddleware); // Apply caching middleware
 app.use(routes);
 
 // Serves images
