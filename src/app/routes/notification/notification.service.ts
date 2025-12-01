@@ -65,3 +65,26 @@ export const getUnreadCount = async (userId: number) => {
 
   return count;
 };
+
+
+export const createNotification = async (userId: number, type: string, data: any, fromUserId: number) => {
+  const notification = await prisma.notification.create({
+    data: {
+      userId,
+      type,
+      data: JSON.stringify(data),
+      fromUserId,
+      read: false,
+    },
+    include: {
+      fromUser: {
+        select: {
+          username: true,
+          image: true,
+        },
+      },
+    },
+  });
+
+  return notification;
+};

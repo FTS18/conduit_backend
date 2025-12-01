@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import auth from '../auth/auth';
-import { getNotifications, markNotificationAsRead, getUnreadCount } from './notification.service';
+import { getNotifications, markNotificationAsRead, getUnreadCount, createNotification } from './notification.service';
 
 const router = Router();
 
@@ -37,6 +37,20 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const notification = await markNotificationAsRead(Number(req.params.id), req.auth?.user?.id);
+      res.json({ notification });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  '/notifications/send',
+  auth.required,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId, type, data } = req.body;
+      const notification = await createNotification(userId, type, data, req.auth?.user?.id);
       res.json({ notification });
     } catch (error) {
       next(error);
