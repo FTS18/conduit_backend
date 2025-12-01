@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import * as bodyParser from 'body-parser';
 import routes from './app/routes/routes';
 import HttpException from './app/models/http-exception.model';
@@ -14,6 +15,7 @@ const app = express();
  * App Configuration
  */
 
+app.use(compression()); // Enable gzip compression
 app.use(
   cors({
     origin: [

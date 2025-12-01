@@ -22,6 +22,10 @@ model Article {
   favoritedBy User[]     @relation("UserFavorites")
   comments    Comment[]
   bookmarks   Bookmark[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([slug])
 }
 
 model Comment {
@@ -38,6 +42,10 @@ model Comment {
   replies       Comment[]     @relation("CommentReplies")
   votes         CommentVote[]
   notifications Notification[]
+
+  @@index([articleId])
+  @@index([authorId])
+  @@index([parentCommentId])
 }
 
 model CommentVote {
@@ -55,6 +63,8 @@ model Tag {
   id       Int       @id @default(autoincrement())
   name     String    @unique
   articles Article[]
+
+  @@index([name])
 }
 
 model User {
@@ -76,6 +86,9 @@ model User {
   notifications Notification[]
   sentNotifications Notification[] @relation("NotificationFromUser")
   demo       Boolean       @default(false)
+
+  @@index([email])
+  @@index([username])
 }
 
 model Bookmark {
@@ -87,6 +100,8 @@ model Bookmark {
   articleId Int
 
   @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
 }
 
 model Notification {
@@ -98,6 +113,14 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int
   fromUser  User?    @relation("NotificationFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  fromUserId Int?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int?
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
   fromUserId Int?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
   commentId Int?

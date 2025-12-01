@@ -82,7 +82,14 @@ export const getArticles = async (query: any, id?: number) => {
     where: { AND: andQueries },
     skip: Number(query.offset) || 0,
     take: Number(query.limit) || 10,
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      createdAt: true,
+      updatedAt: true,
+      authorId: true,
       tagList: {
         select: {
           name: true,
@@ -93,11 +100,20 @@ export const getArticles = async (query: any, id?: number) => {
           username: true,
           bio: true,
           image: true,
-          followedBy: true,
+          followedBy: {
+            where: id ? { id: id } : undefined,
+            select: { id: true },
+          },
         },
       },
-      favoritedBy: true,
-      bookmarks: true,
+      favoritedBy: {
+        where: id ? { id: id } : undefined,
+        select: { id: true },
+      },
+      bookmarks: {
+        where: id ? { userId: id } : undefined,
+        select: { id: true },
+      },
       comments: true,
       _count: {
         select: {
