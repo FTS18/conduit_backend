@@ -44,16 +44,27 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
   }
 
   if ('search' in query && query.search) {
-    queries.push({
-      OR: [
-        { title: { contains: query.search, mode: 'insensitive' } },
-        { description: { contains: query.search, mode: 'insensitive' } },
-        { body: { contains: query.search, mode: 'insensitive' } },
-        {
-          author: { username: { contains: query.search, mode: 'insensitive' } },
-        },
-      ],
-    });
+    const searchTerm = (query.search as string).trim();
+    
+    // Use PostgreSQL full-text search for better performance
+    if (searchTerm.length > 2) {
+      queries.push({
+        OR: [
+          {
+            title: { search: searchTerm },
+          },
+          {
+            description: { search: searchTerm },
+          },
+          {
+            body: { search: searchTerm },
+          },
+          {
+            author: { username: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        ],
+      });
+    }
   }
 
   if ('fromDate' in query || 'toDate' in query) {
@@ -455,6 +466,46 @@ export const deleteArticle = async (slug: string, id: number) => {
   });
 };
 
+// Batch load all comments for an article with replies in 2 queries instead of N queries
+const getCommentsWithRepliesBatch = async (articleId: number, userId?: number) => {
+  // Query 1: Get all comments for the article
+  const allComments = await prisma.comment.findMany({
+    where: { articleId },
+    include: {
+      author: {
+        select: {
+          username: true,
+          bio: true,
+          image: true,
+          followedBy: true,
+        },
+      },
+      votes: true,
+    },
+  });
+
+  // Organize comments by whether they're top-level or replies
+  const commentMap = new Map();
+  const topLevelComments: any[] = [];
+
+  allComments.forEach((comment) => {
+    commentMap.set(comment.id, { ...comment, replies: [] });
+    if (!comment.parentCommentId) {
+      topLevelComments.push(comment.id);
+    }
+  });
+
+  // Build reply tree in memory (O(n) instead of N queries)
+  allComments.forEach((comment) => {
+    if (comment.parentCommentId && commentMap.has(comment.parentCommentId)) {
+      commentMap.get(comment.parentCommentId).replies.push(commentMap.get(comment.id));
+    }
+  });
+
+  // Return only top-level comments with replies nested
+  return topLevelComments.map((id) => commentMap.get(id));
+};
+
 const formatComment = (comment: any, userId?: number): any => ({
   id: comment.id,
   createdAt: comment.createdAt,
@@ -521,37 +572,10 @@ export const getCommentsByArticle = async (slug: string, id?: number) => {
     return [];
   }
 
-  // Fetch only top-level comments (parentCommentId is null) for this article
-  const comments = await prisma.comment.findMany({
-    where: {
-      articleId: article.id,
-      parentCommentId: null,
-    },
-    include: {
-      author: {
-        select: {
-          username: true,
-          bio: true,
-          image: true,
-          followedBy: true,
-        },
-      },
-      votes: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  // Use batch loading instead of recursive queries
+  const comments = await getCommentsWithRepliesBatch(article.id, id);
 
-  // Recursively fetch replies for each top-level comment
-  const commentsWithReplies = await Promise.all(
-    comments.map(async (comment) => ({
-      ...comment,
-      replies: await fetchCommentsRecursive(comment.id),
-    }))
-  );
-
-  const result = commentsWithReplies.map((comment: any) =>
+  const result = comments.map((comment: any) =>
     formatComment(comment, id)
   );
   return result;

@@ -6,6 +6,8 @@ import routes from './app/routes/routes';
 import HttpException from './app/models/http-exception.model';
 import { PrismaClient } from '@prisma/client';
 import { rateLimit } from './app/middleware/rate-limit.middleware';
+import { sanitizeInputMiddleware, validateContentLength } from './app/middleware/sanitize.middleware';
+import { loggingMiddleware } from './app/middleware/logging.middleware';
 
 // Initialize Prisma
 const prisma = new PrismaClient({
@@ -16,9 +18,11 @@ const app = express();
 
 /**
  * Request Cache Middleware - Cache GET requests for 60 seconds
+ * With automatic cleanup to prevent memory leaks
  */
 const requestCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 60000; // 60 seconds
+const MAX_CACHE_ENTRIES = 1000; // Prevent unbounded memory growth
 
 const cacheMiddleware = (
   req: express.Request,
@@ -42,6 +46,18 @@ const cacheMiddleware = (
 
   // Override json to cache responses
   res.json = function (data: any) {
+    // Enforce max cache size - remove oldest entries if limit reached
+    if (requestCache.size >= MAX_CACHE_ENTRIES) {
+      let oldestKey = '';
+      let oldestTime = Date.now();
+      requestCache.forEach((value, key) => {
+        if (value.timestamp < oldestTime) {
+          oldestTime = value.timestamp;
+          oldestKey = key;
+        }
+      });
+      if (oldestKey) requestCache.delete(oldestKey);
+    }
     requestCache.set(cacheKey, { data, timestamp: Date.now() });
     res.set('X-Cache', 'MISS');
     return originalJson(data);
@@ -50,17 +66,37 @@ const cacheMiddleware = (
   next();
 };
 
+// Cleanup expired cache entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  
+  requestCache.forEach((value, key) => {
+    if (now - value.timestamp > CACHE_DURATION) {
+      keysToDelete.push(key);
+    }
+  });
+  
+  keysToDelete.forEach(key => requestCache.delete(key));
+  if (keysToDelete.length > 0) {
+    console.info(`[CACHE] Cleaned up ${keysToDelete.length} expired entries`);
+  }
+}, 5 * 60 * 1000); // 5 minutes
+
 /**
  * App Configuration
  */
 
 app.use(compression()); // Enable gzip compression
+app.use(loggingMiddleware); // Track request timing and errors
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 100, // 100 requests per window
   })
 ); // Apply rate limiting
+app.use(validateContentLength(1048576)); // 1MB max payload
+app.use(sanitizeInputMiddleware); // Prevent XSS attacks
 app.use(
   cors({
     origin: [
