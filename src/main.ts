@@ -6,7 +6,10 @@ import routes from './app/routes/routes';
 import HttpException from './app/models/http-exception.model';
 import { PrismaClient } from '@prisma/client';
 import { rateLimit } from './app/middleware/rate-limit.middleware';
-import { sanitizeInputMiddleware, validateContentLength } from './app/middleware/sanitize.middleware';
+import {
+  sanitizeInputMiddleware,
+  validateContentLength,
+} from './app/middleware/sanitize.middleware';
 import { loggingMiddleware } from './app/middleware/logging.middleware';
 
 // Initialize Prisma
@@ -33,10 +36,15 @@ const cacheMiddleware = (
     return next();
   }
 
-  const cacheKey = `${req.path}?${new URLSearchParams(req.query as any).toString()}`;
+  const cacheKey = `${req.path}?${new URLSearchParams(
+    req.query as any
+  ).toString()}`;
   const cachedResponse = requestCache.get(cacheKey);
 
-  if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_DURATION) {
+  if (
+    cachedResponse &&
+    Date.now() - cachedResponse.timestamp < CACHE_DURATION
+  ) {
     res.set('X-Cache', 'HIT');
     return res.json(cachedResponse.data);
   }
@@ -70,14 +78,14 @@ const cacheMiddleware = (
 setInterval(() => {
   const now = Date.now();
   const keysToDelete: string[] = [];
-  
+
   requestCache.forEach((value, key) => {
     if (now - value.timestamp > CACHE_DURATION) {
       keysToDelete.push(key);
     }
   });
-  
-  keysToDelete.forEach(key => requestCache.delete(key));
+
+  keysToDelete.forEach((key) => requestCache.delete(key));
   if (keysToDelete.length > 0) {
     console.info(`[CACHE] Cleaned up ${keysToDelete.length} expired entries`);
   }

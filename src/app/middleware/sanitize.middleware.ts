@@ -5,7 +5,7 @@ import express from 'express';
  */
 const sanitizeString = (str: string): string => {
   if (!str || typeof str !== 'string') return '';
-  
+
   return str
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -24,7 +24,7 @@ const sanitizeObject = (obj: any): any => {
     return sanitizeString(obj);
   }
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item));
+    return obj.map((item) => sanitizeObject(item));
   }
   if (obj !== null && typeof obj === 'object') {
     const sanitized: any = {};
@@ -79,14 +79,14 @@ export const validateContentLength = (maxSize: number = 1048576) => {
     next: express.NextFunction
   ) => {
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
-    
+
     if (contentLength > maxSize) {
       return res.status(413).json({
         status: 'error',
         message: `Payload too large. Maximum size is ${maxSize} bytes.`,
       });
     }
-    
+
     next();
   };
 };

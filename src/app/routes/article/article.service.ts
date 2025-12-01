@@ -45,7 +45,7 @@ const buildFindAllQuery = (query: any, id: number | undefined) => {
 
   if ('search' in query && query.search) {
     const searchTerm = (query.search as string).trim();
-    
+
     // Use PostgreSQL full-text search for better performance
     if (searchTerm.length > 2) {
       queries.push({
@@ -467,7 +467,10 @@ export const deleteArticle = async (slug: string, id: number) => {
 };
 
 // Batch load all comments for an article with replies in 2 queries instead of N queries
-const getCommentsWithRepliesBatch = async (articleId: number, userId?: number) => {
+const getCommentsWithRepliesBatch = async (
+  articleId: number,
+  userId?: number
+) => {
   // Query 1: Get all comments for the article
   const allComments = await prisma.comment.findMany({
     where: { articleId },
@@ -498,7 +501,9 @@ const getCommentsWithRepliesBatch = async (articleId: number, userId?: number) =
   // Build reply tree in memory (O(n) instead of N queries)
   allComments.forEach((comment) => {
     if (comment.parentCommentId && commentMap.has(comment.parentCommentId)) {
-      commentMap.get(comment.parentCommentId).replies.push(commentMap.get(comment.id));
+      commentMap
+        .get(comment.parentCommentId)
+        .replies.push(commentMap.get(comment.id));
     }
   });
 
@@ -528,7 +533,9 @@ const formatComment = (comment: any, userId?: number): any => ({
 });
 
 // Recursive function to fetch nested replies with votes
-const fetchCommentsRecursive = async (parentCommentId: number | null = null): Promise<any[]> => {
+const fetchCommentsRecursive = async (
+  parentCommentId: number | null = null
+): Promise<any[]> => {
   const comments = await prisma.comment.findMany({
     where: {
       parentCommentId: parentCommentId,
@@ -575,9 +582,7 @@ export const getCommentsByArticle = async (slug: string, id?: number) => {
   // Use batch loading instead of recursive queries
   const comments = await getCommentsWithRepliesBatch(article.id, id);
 
-  const result = comments.map((comment: any) =>
-    formatComment(comment, id)
-  );
+  const result = comments.map((comment: any) => formatComment(comment, id));
   return result;
 };
 

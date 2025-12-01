@@ -47,7 +47,9 @@ export const requireVersion = (allowedVersions: string[]) => {
     if (!allowedVersions.includes(version)) {
       return res.status(400).json({
         status: 'error',
-        message: `This endpoint is not available in API version ${version}. Supported versions: ${allowedVersions.join(', ')}`,
+        message: `This endpoint is not available in API version ${version}. Supported versions: ${allowedVersions.join(
+          ', '
+        )}`,
         supportedVersions: allowedVersions,
       });
     }
@@ -59,7 +61,9 @@ export const requireVersion = (allowedVersions: string[]) => {
 /**
  * Response versioning middleware - transform response based on API version
  */
-export const transformResponseByVersion = (transformers: { [key: string]: (data: any) => any }) => {
+export const transformResponseByVersion = (transformers: {
+  [key: string]: (data: any) => any;
+}) => {
   return (
     req: express.Request,
     res: express.Response,
@@ -94,7 +98,10 @@ export const deprecationWarning = (message: string) => {
     next: express.NextFunction
   ) => {
     res.set('Deprecation', 'true');
-    res.set('Sunset', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString());
+    res.set(
+      'Sunset',
+      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString()
+    );
     res.set('Warning', `299 - "${message}"`);
 
     next();

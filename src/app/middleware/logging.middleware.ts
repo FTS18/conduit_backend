@@ -31,7 +31,7 @@ export const loggingMiddleware = (
 
   const logRequest = (status: number, error?: string) => {
     const duration = Date.now() - startTime;
-    
+
     const log: RequestLog = {
       timestamp: new Date().toISOString(),
       method: req.method,
@@ -45,10 +45,14 @@ export const loggingMiddleware = (
 
     // Log slow requests or errors
     if (duration > 1000) {
-      console.warn(`[SLOW] ${req.method} ${req.path} - ${duration}ms (${status})`);
+      console.warn(
+        `[SLOW] ${req.method} ${req.path} - ${duration}ms (${status})`
+      );
     }
     if (status >= 400) {
-      console.error(`[ERROR] ${req.method} ${req.path} - ${status} ${error || ''}`);
+      console.error(
+        `[ERROR] ${req.method} ${req.path} - ${status} ${error || ''}`
+      );
     }
 
     // Store in memory
@@ -82,16 +86,14 @@ export const getRecentLogs = (limit: number = 50): RequestLog[] => {
  * Get slow requests from logs
  */
 export const getSlowRequests = (threshold: number = 1000): RequestLog[] => {
-  return logs.filter(log => log.duration > threshold);
+  return logs.filter((log) => log.duration > threshold);
 };
 
 /**
  * Get error logs
  */
 export const getErrorLogs = (limit: number = 50): RequestLog[] => {
-  return logs
-    .filter(log => log.status >= 400)
-    .slice(-limit);
+  return logs.filter((log) => log.status >= 400).slice(-limit);
 };
 
 /**
@@ -99,11 +101,12 @@ export const getErrorLogs = (limit: number = 50): RequestLog[] => {
  */
 export const getAnalytics = () => {
   const totalRequests = logs.length;
-  const avgDuration = totalRequests > 0 
-    ? logs.reduce((sum, log) => sum + log.duration, 0) / totalRequests 
-    : 0;
-  const slowCount = logs.filter(log => log.duration > 1000).length;
-  const errorCount = logs.filter(log => log.status >= 400).length;
+  const avgDuration =
+    totalRequests > 0
+      ? logs.reduce((sum, log) => sum + log.duration, 0) / totalRequests
+      : 0;
+  const slowCount = logs.filter((log) => log.duration > 1000).length;
+  const errorCount = logs.filter((log) => log.status >= 400).length;
 
   return {
     totalRequests,
