@@ -32,13 +32,17 @@ const checkUserUniqueness = async (email: string, username: string) => {
     throw new HttpException(422, {
       errors: {
         ...(existingUserByEmail ? { email: ['has already been taken'] } : {}),
-        ...(existingUserByUsername ? { username: ['has already been taken'] } : {}),
+        ...(existingUserByUsername
+          ? { username: ['has already been taken'] }
+          : {}),
       },
     });
   }
 };
 
-export const createUser = async (input: RegisterInput): Promise<RegisteredUser> => {
+export const createUser = async (
+  input: RegisterInput
+): Promise<RegisteredUser> => {
   const email = input.email?.trim().toLowerCase();
   const username = input.username?.trim();
   const password = input.password?.trim();
@@ -169,7 +173,8 @@ export const getCurrentUser = async (id: number) => {
 };
 
 export const updateUser = async (userPayload: any, id: number) => {
-  const { email, username, password, image, bio, location, website } = userPayload;
+  const { email, username, password, image, bio, location, website } =
+    userPayload;
   let hashedPassword;
 
   if (password) {
@@ -258,7 +263,9 @@ export const supabaseLogin = async (userPayload: any) => {
 
     let finalUsername = username;
     let counter = 1;
-    while (await prisma.user.findUnique({ where: { username: finalUsername } })) {
+    while (
+      await prisma.user.findUnique({ where: { username: finalUsername } })
+    ) {
       finalUsername = `${username}${counter}`;
       counter++;
     }
@@ -268,7 +275,8 @@ export const supabaseLogin = async (userPayload: any) => {
         username: finalUsername,
         email,
         password: hashedPassword,
-        image: image || `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
+        image:
+          image || `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
       },
       select: {
         id: true,

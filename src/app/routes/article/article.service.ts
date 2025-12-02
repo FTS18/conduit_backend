@@ -180,7 +180,10 @@ export const getArticles = async (query: any, id?: number) => {
         try {
           return articleMapper(article, id);
         } catch (err) {
-          console.error('Error mapping article:', { slug: article?.slug, error: err });
+          console.error('Error mapping article:', {
+            slug: article?.slug,
+            error: err,
+          });
           return null;
         }
       })
@@ -267,7 +270,9 @@ export const getFeed = async (offset: number, limit: number, id: number) => {
   });
 
   // Filter out any undefined articles and map them
-  const validArticles = articles.filter(a => a && a.slug).map((article: any) => articleMapper(article, id));
+  const validArticles = articles
+    .filter((a) => a && a.slug)
+    .map((article: any) => articleMapper(article, id));
 
   return {
     articles: validArticles,
