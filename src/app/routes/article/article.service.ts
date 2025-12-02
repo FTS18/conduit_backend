@@ -174,15 +174,26 @@ export const getArticles = async (query: any, id?: number) => {
   ]);
 
   const result = {
-    articles: articles.map((article: any) => articleMapper(article, id)),
+    articles: articles
+      .filter((article: any) => article && article.slug)
+      .map((article: any) => {
+        try {
+          return articleMapper(article, id);
+        } catch (err) {
+          console.error('Error mapping article:', { slug: article?.slug, error: err });
+          return null;
+        }
+      })
+      .filter((article: any) => article !== null),
     articlesCount,
   };
 
-  // Cache first page results for 5 minutes (articles change frequently)
-  if (isCacheable && offset === 0 && limit === 10) {
-    const cacheKey = `articles:list:page1:user${id || 'anon'}`;
-    setCachedQuery(cacheKey, result, 5 * 60 * 1000);
-  }
+  // TODO: Re-enable caching after fixing invalidation for follow/upvote/downvote operations
+  // Currently disabled because cache doesn't invalidate on user actions
+  // if (isCacheable && offset === 0 && limit === 10) {
+  //   const cacheKey = `articles:list:page1:user${id || 'anon'}`;
+  //   setCachedQuery(cacheKey, result, 5 * 60 * 1000);
+  // }
 
   return result;
 };
@@ -207,7 +218,14 @@ export const getFeed = async (offset: number, limit: number, id: number) => {
     },
     skip: offset || 0,
     take: limit || 10,
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      createdAt: true,
+      updatedAt: true,
+      authorId: true,
       tagList: {
         select: {
           name: true,
@@ -218,21 +236,41 @@ export const getFeed = async (offset: number, limit: number, id: number) => {
           username: true,
           bio: true,
           image: true,
-          followedBy: true,
+          followedBy: id
+            ? {
+                where: { id: id },
+                select: { id: true },
+              }
+            : undefined,
         },
       },
-      favoritedBy: true,
-      bookmarks: true,
+      favoritedBy: id
+        ? {
+            where: { id: id },
+            select: { id: true },
+          }
+        : undefined,
+      bookmarks: id
+        ? {
+            where: { userId: id },
+            select: { id: true },
+          }
+        : undefined,
       _count: {
         select: {
           favoritedBy: true,
+          bookmarks: true,
+          comments: true,
         },
       },
     },
   });
 
+  // Filter out any undefined articles and map them
+  const validArticles = articles.filter(a => a && a.slug).map((article: any) => articleMapper(article, id));
+
   return {
-    articles: articles.map((article: any) => articleMapper(article, id)),
+    articles: validArticles,
     articlesCount,
   };
 };
@@ -270,11 +308,7 @@ export const createArticle = async (article: any, id: number) => {
     throw new HttpException(422, { errors: { title: ['must be unique'] } });
   }
 
-  const {
-    authorId,
-    id: articleId,
-    ...createdArticle
-  } = await prisma.article.create({
+  const createdArticle = await prisma.article.create({
     data: {
       title,
       description,
@@ -292,7 +326,15 @@ export const createArticle = async (article: any, id: number) => {
         },
       },
     },
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      body: true,
+      createdAt: true,
+      updatedAt: true,
+      authorId: true,
       tagList: {
         select: {
           name: true,
@@ -303,14 +345,25 @@ export const createArticle = async (article: any, id: number) => {
           username: true,
           bio: true,
           image: true,
-          followedBy: true,
+          followedBy: {
+            where: { id: id },
+            select: { id: true },
+          },
         },
       },
-      favoritedBy: true,
-      bookmarks: true,
+      favoritedBy: {
+        where: { id: id },
+        select: { id: true },
+      },
+      bookmarks: {
+        where: { userId: id },
+        select: { id: true },
+      },
       _count: {
         select: {
           favoritedBy: true,
+          bookmarks: true,
+          comments: true,
         },
       },
     },

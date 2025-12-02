@@ -7,9 +7,12 @@ import generateToken from './token.utils';
 import { User } from './user.model';
 
 const checkUserUniqueness = async (email: string, username: string) => {
-  const existingUserByEmail = await prisma.user.findUnique({
+  const existingUserByEmail = await prisma.user.findFirst({
     where: {
-      email,
+      email: {
+        mode: 'insensitive',
+        equals: email,
+      },
     },
     select: {
       id: true,
@@ -36,7 +39,7 @@ const checkUserUniqueness = async (email: string, username: string) => {
 };
 
 export const createUser = async (input: RegisterInput): Promise<RegisteredUser> => {
-  const email = input.email?.trim();
+  const email = input.email?.trim().toLowerCase();
   const username = input.username?.trim();
   const password = input.password?.trim();
   const { image, bio, demo, location, website } = input;
@@ -86,7 +89,7 @@ export const createUser = async (input: RegisterInput): Promise<RegisteredUser> 
 };
 
 export const login = async (userPayload: any) => {
-  const email = userPayload.email?.trim();
+  const email = userPayload.email?.trim().toLowerCase();
   const password = userPayload.password?.trim();
 
   if (!email) {
@@ -97,9 +100,12 @@ export const login = async (userPayload: any) => {
     throw new HttpException(422, { errors: { password: ["can't be blank"] } });
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: {
-      email,
+      email: {
+        mode: 'insensitive',
+        equals: email,
+      },
     },
     select: {
       id: true,
